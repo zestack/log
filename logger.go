@@ -145,6 +145,7 @@ func (l *logger) SetTimezone(loc *time.Location) {
 	// 参考 atomic.Pointer#Store 实现
 	atomic.StorePointer(&l.timezone, unsafe.Pointer(loc))
 }
+
 func (l *logger) SetHandler(h Handler) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
