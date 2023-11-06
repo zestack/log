@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-var global = New("log")
+var global = New("")
 
 func Default() Logger                { return global }
 func SetDefault(l Logger)            { global = l }
