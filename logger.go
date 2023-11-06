@@ -90,12 +90,9 @@ type Options struct {
 	Level    Level
 	Attrs    []Attr
 	Timezone *time.Location
-	Writer   io.Writer        // 默认值为 os.Stderr
-	Handler  Handler          // 默认值为 CommonHandler
-	NowFunc  func() time.Time // 默认值为 time.Now
+	Writer   io.Writer // 默认值为 os.Stderr
+	Handler  Handler   // 默认值为 CommonHandler
 }
-
-type Option func(*logger)
 
 func New(prefix string, opts ...Options) Logger {
 	var o Options
@@ -144,6 +141,12 @@ func (l *logger) Timezone() *time.Location {
 func (l *logger) SetTimezone(loc *time.Location) {
 	// 参考 atomic.Pointer#Store 实现
 	atomic.StorePointer(&l.timezone, unsafe.Pointer(loc))
+}
+
+func (l *logger) Handler() Handler {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return l.handler
 }
 
 func (l *logger) SetHandler(h Handler) {
@@ -201,17 +204,17 @@ func (l *logger) WithPrefix(prefix string, attrs ...Attr) Logger {
 		prefix = l.Prefix()
 	}
 	l.mu.RLock()
-	lc := &logger{
-		attrs:   append(l.attrs, attrs...),
-		handler: l.handler,
-		mu:      l.mu,
+	if len(l.attrs) > 0 {
+		attrs = append(l.attrs, attrs...)
 	}
 	l.mu.RUnlock()
-	lc.SetOutput(l.Output())
-	lc.SetTimezone(l.Timezone())
-	lc.SetPrefix(prefix)
-	lc.SetLevel(l.Level())
-	return lc
+	return New(prefix, Options{
+		Level:    l.Level(),
+		Attrs:    attrs,
+		Timezone: l.Timezone(),
+		Writer:   l.Output().(*Writer).Writer,
+		Handler:  l.Handler(),
+	})
 }
 
 func (l *logger) Print(i ...any) {
