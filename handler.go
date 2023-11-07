@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 type color int
@@ -50,9 +50,18 @@ func colorContent(colorful bool, l Level, s string) string {
 // 全局缓存前缀
 // TODO(hupeh): 使用 WeakMap
 var prefixToColor sync.Map
+var prefixLength int32
 
 func colorPrefix(colorful bool, s string) string {
-	s = overflow(s, 10)
+	count := int(atomic.LoadInt32(&prefixLength))
+	if l := len(s); count < l {
+		if l < 9 {
+			l = 9
+		}
+		atomic.StoreInt32(&prefixLength, int32(l+1))
+		count = l + 1
+	}
+	s = overflow(s, count)
 	if !colorful {
 		return s
 	}
@@ -129,13 +138,13 @@ func overflow(s string, n int) string {
 	return s[:i] + "..." + s[j:]
 }
 
-// 获取正在运行的函数名
-func funcName() string {
-	pc := make([]uintptr, 1)
-	runtime.Callers(5, pc)
-	f := runtime.FuncForPC(pc[0])
-	return f.Name()
-}
+//// 获取正在运行的函数名
+//func funcName() string {
+//	pc := make([]uintptr, 1)
+//	runtime.Callers(5, pc)
+//	f := runtime.FuncForPC(pc[0])
+//	return f.Name()
+//}
 
 func handle(w *Writer, r Record) {
 	var attrs map[string]any
@@ -160,8 +169,8 @@ func handle(w *Writer, r Record) {
 
 	prefix := r.Time.Format("2006-01-02 15:04:05.000 ") // 时间
 	prefix += colorPrefix(colorful, r.Prefix)           // 日志前缀
-	prefix += overflow(funcName(), 20) + "  "           // 函数名称
-	prefix += colorLevel(colorful, r.Level) + " "       // 日志级别
+	//prefix += overflow(funcName(), 30) + "  "           // 函数名称
+	prefix += colorLevel(colorful, r.Level) + " " // 日志级别
 
 	// TODO(hupeh): 如何处理换行行为？？
 	//for i, line := range strings.Split(r.Message, "\n") {
