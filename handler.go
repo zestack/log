@@ -53,6 +53,9 @@ var prefixToColor sync.Map
 var prefixLength int32
 
 func colorPrefix(colorful bool, s string) string {
+	if !colorful {
+		return s
+	}
 	count := int(atomic.LoadInt32(&prefixLength))
 	if l := len(s); count < l {
 		if l < 9 {
@@ -62,9 +65,6 @@ func colorPrefix(colorful bool, s string) string {
 		count = l + 1
 	}
 	s = overflow(s, count)
-	if !colorful {
-		return s
-	}
 	if v, ok := prefixToColor.Load(s); ok {
 		return v.(color).wrap(s)
 	}
@@ -167,8 +167,8 @@ func handle(w *Writer, r Record) {
 		}
 	}
 
-	prefix := r.Time.Format("2006-01-02 15:04:05.000 ") // 时间
-	prefix += colorPrefix(colorful, r.Prefix)           // 日志前缀
+	prefix := r.Time.Format("2006-01-02 15:04:05.000") + " " // 时间
+	prefix += colorPrefix(colorful, r.Prefix) + " "          // 日志前缀
 	//prefix += overflow(funcName(), 30) + "  "           // 函数名称
 	prefix += colorLevel(colorful, r.Level) + " " // 日志级别
 
@@ -186,7 +186,7 @@ func handle(w *Writer, r Record) {
 	//		w.Write([]byte(strings.Repeat(" ", n) + line + suffix + "\n"))
 	//	}
 	//}
-	msg := strings.ReplaceAll(r.Message, "\n", "")
+	msg := strings.ReplaceAll(r.Message, "\n", "\\n")
 	msg = colorContent(colorful, r.Level, msg)
 	_, err := w.Write([]byte(prefix + msg + suffix + "\n"))
 	if err != nil {
