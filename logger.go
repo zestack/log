@@ -12,6 +12,7 @@ import (
 	"unsafe"
 
 	"github.com/mattn/go-isatty"
+	"zestack.dev/color"
 )
 
 // Logger defines the logging interface.
@@ -60,17 +61,15 @@ type Record struct {
 }
 
 type Writer struct {
-	io.Writer
-	isDiscard  bool
-	isColorful bool
+	*color.Color
 }
 
 func (w *Writer) IsColorful() bool {
-	return w.isColorful
+	return w.Enabled()
 }
 
 func (w *Writer) IsDiscard() bool {
-	return w.isDiscard
+	return w.Output() == io.Discard
 }
 
 // Handler 自定义日志处理器
@@ -127,9 +126,7 @@ func (l *logger) SetOutput(w io.Writer) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.writer = &Writer{
-		Writer:     w,
-		isDiscard:  w == io.Discard,
-		isColorful: isTerminal(w),
+		color.NewWithOutput(w),
 	}
 }
 
@@ -183,10 +180,10 @@ func (l *logger) SetLevel(level Level) {
 
 // Enabled 判断指定的日志级别是否开启
 func (l *logger) Enabled(level Level) bool {
-	if level >= LevelPanic {
+	if level >= LevelPanic || level <= LevelPrint {
 		return true
 	}
-	if level >= LevelTrace {
+	if level > LevelPrint {
 		return l.Level() <= level
 	}
 	return false
@@ -212,21 +209,21 @@ func (l *logger) WithPrefix(prefix string, attrs ...Attr) Logger {
 		Level:    l.Level(),
 		Attrs:    attrs,
 		Timezone: l.Timezone(),
-		Writer:   l.Output().(*Writer).Writer,
+		Writer:   l.Output().(*Writer).Output(),
 		Handler:  l.Handler(),
 	})
 }
 
 func (l *logger) Print(i ...any) {
-	l.log(LevelTrace, "", i...)
+	l.log(LevelPrint, "", i...)
 }
 
 func (l *logger) Printf(format string, args ...any) {
-	l.log(LevelTrace, format, args...)
+	l.log(LevelPrint, format, args...)
 }
 
 func (l *logger) Printj(j map[string]any) {
-	l.log(LevelTrace, "j", j)
+	l.log(LevelPrint, "j", j)
 }
 
 func (l *logger) Debug(i ...any) {

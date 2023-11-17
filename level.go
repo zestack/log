@@ -11,7 +11,7 @@ import (
 type Level int
 
 const (
-	LevelTrace Level = iota
+	LevelPrint Level = iota
 	LevelDebug       // 用于程序调试
 	LevelInfo        // 用于程序运行
 	LevelWarn        // 潜在错误或非预期结果
@@ -70,8 +70,8 @@ func (l Level) Level() slog.Level {
 // String 返回字符串形式
 func (l Level) String() string {
 	switch l {
-	case LevelTrace:
-		return "TRACE"
+	case LevelPrint:
+		return "PRINT"
 	case LevelDebug:
 		return "DEBUG"
 	case LevelInfo:
@@ -85,8 +85,8 @@ func (l Level) String() string {
 	case LevelFatal:
 		return "FATAL"
 	default:
-		if l < LevelTrace {
-			return fmt.Sprintf("TRACE%d", l-LevelTrace)
+		if l < LevelPrint {
+			return fmt.Sprintf("PRINT%d", l-LevelPrint)
 		}
 		return fmt.Sprintf("FATAL+%d", l-LevelFatal)
 	}
@@ -109,6 +109,8 @@ func parseStringLevel(s string) (l Level, err error) {
 		}
 	}
 	switch strings.ToUpper(name) {
+	case "PRINT":
+		l = LevelPrint
 	case "DEBUG":
 		l = LevelDebug
 	case "INFO":
