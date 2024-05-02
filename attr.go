@@ -24,7 +24,7 @@ func Int(key string, value int) Attr {
 	return slog.Int(key, value)
 }
 
-// Uint64 returns an Attr for a uint64.
+// Uint64 returns an Attr for an uint64.
 func Uint64(key string, v uint64) Attr {
 	return slog.Uint64(key, v)
 }
@@ -65,4 +65,40 @@ func Group(key string, args ...any) Attr {
 // See [AnyValue] for how values are treated.
 func Any(key string, value any) Attr {
 	return slog.Any(key, value)
+}
+
+const badKey = "!BADKEY"
+
+// argsToAttr turns a prefix of the nonempty args slice into an Attr
+// and returns the unconsumed portion of the slice.
+// If args[0] is an Attr, it returns it.
+// If args[0] is a string, it treats the first two elements as
+// a key-value pair.
+// Otherwise, it treats args[0] as a value with a missing key.
+func argsToAttr(args []any) (Attr, []any) {
+	switch x := args[0].(type) {
+	case string:
+		if len(args) == 1 {
+			return String(badKey, x), nil
+		}
+		return Any(x, args[1]), args[2:]
+
+	case Attr:
+		return x, args[1:]
+
+	default:
+		return Any(badKey, x), args[1:]
+	}
+}
+
+func argsToAttrSlice(args []any) []Attr {
+	var (
+		attr  Attr
+		attrs []Attr
+	)
+	for len(args) > 0 {
+		attr, args = argsToAttr(args)
+		attrs = append(attrs, attr)
+	}
+	return attrs
 }
