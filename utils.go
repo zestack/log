@@ -3,6 +3,7 @@ package log
 import (
 	"log/slog"
 	"sync"
+
 	"zestack.dev/color"
 )
 
